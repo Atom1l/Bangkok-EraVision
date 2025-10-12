@@ -3,33 +3,35 @@ from PIL import Image
 from transformers import CLIPProcessor, CLIPModel
 import torch
 
+
 # โหลดโมเดล CLIP
 model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
 processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
 
+
 ALL_PLACES = [
-    "Ratchadamnoen Avenue – Democracy Monument",
-    "Sala Chalermkrung Royal Theatre",
-    "Giant Swing – Wat Suthat",
-    "Khao San Road",
-    "Phra Sumen Fort – Santichaiprakan Park",
-    "National Museum Bangkok",
-    "Yaowarat (Chinatown)",
-    "Sanam Luang (Royal Field)"
+   "Ratchadamnoen Avenue – Democracy Monument",
+   "Sala Chalermkrung Royal Theatre",
+   "Giant Swing – Wat Suthat",
+   "Khao San Road",
+   "Phra Sumen Fort – Santichaiprakan Park",
+   "National Museum Bangkok",
+   "Yaowarat (Chinatown)",
+   "Sanam Luang (Royal Field)"
 ]
 
 
-def check_image_category(image_path, expected_place):
-    image = Image.open(image_path).convert("RGB")
-    texts = ALL_PLACES
-    
-    inputs = processor(text=texts, images=image, return_tensors="pt", padding=True)
-    outputs = model(**inputs)
-    
-    probs = outputs.logits_per_image.softmax(dim=1)
-    # หา index ของ expected_place
-    idx = texts.index(expected_place)
-    confidence = probs[0][idx].item()
-    
-    return confidence
 
+def check_image_category(image_path, expected_place):
+   image = Image.open(image_path).convert("RGB")
+   texts = ALL_PLACES
+  
+   inputs = processor(text=texts, images=image, return_tensors="pt", padding=True)
+   outputs = model(**inputs)
+  
+   probs = outputs.logits_per_image.softmax(dim=1)
+   # หา index ของ expected_place
+   idx = texts.index(expected_place)
+   confidence = probs[0][idx].item()
+  
+   return confidence
