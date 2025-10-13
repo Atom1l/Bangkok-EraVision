@@ -23,15 +23,10 @@ ALL_PLACES = [
 
 
 def check_image_category(image_path, expected_place):
-   image = Image.open(image_path).convert("RGB")
-   texts = ALL_PLACES
-  
-   inputs = processor(text=texts, images=image, return_tensors="pt", padding=True)
-   outputs = model(**inputs)
-  
-   probs = outputs.logits_per_image.softmax(dim=1)
-   # หา index ของ expected_place
-   idx = texts.index(expected_place)
-   confidence = probs[0][idx].item()
-  
-   return confidence
+    image = Image.open(image_path).convert("RGB")
+    texts = ALL_PLACES
+    inputs = processor(text=texts, images=image, return_tensors="pt", padding=True)
+    with torch.no_grad():
+        outputs = model(**inputs)
+    probs = outputs.logits_per_image.softmax(dim=1)
+    return probs[0][texts.index(expected_place)].item()
