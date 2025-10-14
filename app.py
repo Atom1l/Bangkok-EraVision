@@ -5,14 +5,18 @@ import os
 from PIL import Image
 import base64
 import requests
-from runwayml import RunwayML, TaskFailedError
 import glob
-
+import random
+from runwayml import RunwayML
 from dotenv import load_dotenv
-load_dotenv()
 
 from classifier import check_image_category
+from reference_prompt_builder import build_prompt  # <-- import ใหม่
 
+# โหลด environment variables
+load_dotenv()
+
+# ตั้งค่า Flask
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = "uploads"
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -24,14 +28,8 @@ RUNWAY_API_KEY = os.getenv("RUNWAY_API_KEY")
 openai.api_key = OPENAI_API_KEY
 runway_client = RunwayML(api_key=RUNWAY_API_KEY)
 
-# --- Prompts ---
-PROMPT_IMAGE = (
-    "Transform this image to realistically reflect Bangkok in the 1960s. "
-    "Keep original composition, retro colors, vintage cars, old shop signs, 1960s clothing."
-)
 PROMPT_VIDEO = "Short 5-second video, gentle camera motion, vintage 1960s street style"
 
-# --- ฟังก์ชันช่วยสร้างชื่อไฟล์เรียงลำดับ ---
 def get_next_filename(folder, prefix="BangkokEra", ext=".png"):
     os.makedirs(folder, exist_ok=True)
     files = glob.glob(os.path.join(folder, f"{prefix}*{ext}"))
@@ -41,24 +39,24 @@ def get_next_filename(folder, prefix="BangkokEra", ext=".png"):
     next_num = max(numbers) + 1
     return os.path.join(folder, f"{prefix}{next_num:03d}{ext}")
 
-# --- ฟังก์ชันแปลงภาพ OpenAI ---
-def convert_image_to_1960s(image_path):
+def convert_image_to_1960s(image_path, place_name, reference_folder=None):
+    """สร้างภาพ OpenAI แบบอิง reference"""
     allowed_exts = (".png", ".jpg", ".jpeg", ".webp")
     if not image_path.lower().endswith(allowed_exts):
         raise ValueError("Only PNG, JPG, JPEG, or WebP images are supported.")
 
-    img = Image.open(image_path)
-    if img.mode != "RGB":
-        img = img.convert("RGB")
-
+    img = Image.open(image_path).convert("RGB")
     buffered = BytesIO()
     img.save(buffered, format="PNG")
     buffered.seek(0)
 
+    # ใช้ build_prompt จาก reference_prompt_builder
+    full_prompt = build_prompt(place_name, user_image_path=image_path)
+
     response = openai.images.edit(
         model="gpt-image-1",
         image=("input.png", buffered, "image/png"),
-        prompt=PROMPT_IMAGE,
+        prompt=full_prompt,
         size="1024x1024"
     )
 
@@ -67,11 +65,8 @@ def convert_image_to_1960s(image_path):
     else:
         raise ValueError("OpenAI did not return valid image data.")
 
-
-# --- ฟังก์ชันสร้างวิดีโอ Runway ---
 def generate_video_from_image(img_bytes, output_path="output.mp4"):
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
-
     task = runway_client.image_to_video.create(
         model="gen4_turbo",
         prompt_image=f"data:image/png;base64,{img_b64}",
@@ -96,9 +91,6 @@ def generate_video_from_image(img_bytes, output_path="output.mp4"):
 
     return output_path
 
-# --- Flask routes ---
-from classifier import check_image_category
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     message = ""
@@ -106,7 +98,8 @@ def index():
     video_file = None
 
     if request.method == "POST":
-        place_selected = request.form.get("location")  # ชื่อใน select dropdown
+        place_selected = request.form.get("location")
+
         if "image" not in request.files:
             message = "No file uploaded."
         else:
@@ -115,21 +108,21 @@ def index():
                 message = "No file selected."
             else:
                 try:
-                    # save temporary file
                     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_upload.png")
                     file.save(temp_path)
 
-                    # --- ตรวจ image classification ---
+                    # --- ตรวจสถานที่ ---
                     confidence = check_image_category(temp_path, place_selected)
                     threshold = 0.8
+
                     if confidence < threshold:
-                        message = f"ภาพนี้อาจไม่ใช่ {place_selected}"
+                        message = f"ภาพนี้อาจไม่ใช่ {place_selected} (ความมั่นใจ {confidence:.2f})"
                         img_file = temp_path
                     else:
-                        # ผ่านแล้ว → แปลงรูปด้วย OpenAI / LoRA
-                        img_bytes = convert_image_to_1960s(temp_path)
+                        ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
+                        img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
 
-                        # สร้างโฟลเดอร์และ save
+                        # --- บันทึกภาพและวิดีโอ ---
                         images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
                         videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database")
                         os.makedirs(images_folder, exist_ok=True)
