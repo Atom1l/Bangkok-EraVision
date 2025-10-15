@@ -689,17 +689,24 @@
     </div>
 
     <!-- Result Modal -->
-    <div id="resultModal" class="modal" data-location="{{ request.form.get('location', '') if video_file else '' }}">
+    <!-- <div id="resultModal" class="modal" data-location="{{ request.form.get('location', '') if video_file else '' }}"> -->
+    <div id="resultModal" class="modal" data-location="{{ request.form.get('location', '') if img_file else '' }}">
         <div class="modal-content">
             <button class="modal-close" id="modalClose">&times;</button>
             
-            <div class="modal-video-frame">
+            <!-- <div class="modal-video-frame">
                 <video class="modal-video" id="modalVideo" controls loop autoplay muted>
                     {% if video_file %}
                     <source src="{{ url_for('video') }}" type="video/mp4">
                     {% endif %}
                     Your browser does not support the video tag.
                 </video>
+            </div> -->
+
+            <div class="modal-video-frame">
+                {% if img_file %}
+                <img src="{{ url_for('image') }}" alt="Generated 1960s Image" class="modal-video" id="modalImage">
+                {% endif %}
             </div>
 
             <p class="modal-disclaimer">* These created images are only simulations and technological reconstructions and aren't images or facts of the places in the 1960s.</p>
@@ -841,13 +848,25 @@
         });
 
         // Show modal if video exists
+        // window.addEventListener('load', () => {
+        //     const modal = document.getElementById('resultModal');
+        //     const selectedLocation = modal.getAttribute('data-location');
+        //     const videoSource = document.querySelector('#modalVideo source');
+            
+        //     // Check if we have a video result to show
+        //     if (selectedLocation && videoSource && videoSource.src) {
+        //         showResultModal(selectedLocation);
+        //     }
+        // });
+
+        // Show modal if image exists
         window.addEventListener('load', () => {
             const modal = document.getElementById('resultModal');
             const selectedLocation = modal.getAttribute('data-location');
-            const videoSource = document.querySelector('#modalVideo source');
+            const generatedImage = document.querySelector('#modalImage');
             
-            // Check if we have a video result to show
-            if (selectedLocation && videoSource && videoSource.src) {
+            // Check if we have an image result to show
+            if (selectedLocation && generatedImage && generatedImage.src) {
                 showResultModal(selectedLocation);
             }
         });
