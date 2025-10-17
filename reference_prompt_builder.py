@@ -79,6 +79,30 @@ Your task is to edit the uploaded photo with two distinct rules:
 **Atmosphere:** The final image must be energetic and vibrant, capturing the spirit of 1960s Chinatown.
 """,
 
+    # ====== ศาลาเฉลิมกรุง ======
+    "Sala Chalermkrung Royal Theatre": """
+    Your task is to modify the uploaded photo. Adherence to the following rules is absolute and mandatory.
+
+**Rule 1: Core Architecture (Preservation)**
+- The fundamental architectural form, perspective, and placement of the Sala Chalermkrung theatre building MUST be strictly preserved as it appears in the uploaded photo.
+- Key unchangeable features include its modernist blocky structure, the distinct corner entrance, the rows of upper-floor windows, and the circular decorative medallions below the roofline.
+- For fine details like the texture of the concrete and the design of the rooftop neon sign structure, draw inspiration from these visual cues: '{landmark_details_from_dataset}'.
+
+**Rule 2: Theatrical Facade Decoration (Transformation)**
+- This is your primary transformation task. The building's facade MUST be adorned as a classic 1960s Thai movie palace.
+- **Hand-Painted Billboards:** Large sections of the upper facade MUST be covered with massive, hand-painted movie billboards. These billboards must depict scenes and actors characteristic of 1960s Thai cinema, featuring rich colors and a painterly style.
+- **Character Cut-outs:** It is MANDATORY to add at least one large, painted wooden cut-out figure of a movie star. This figure should be placed prominently, either on the marquee above the entrance or standing at street level in front of the theatre.
+- **Marquee & Banners:** The marquee above the entrance must be decorated with smaller, hand-lettered banners and signs announcing the current film's title and stars in Thai script.
+
+**Rule 3: The Surrounding Street Scene (Contextual Transformation)**
+- The street and sidewalks must be transformed to reflect a 1960s Bangkok setting.
+- **Vehicles:** The street MUST be populated with a realistic mix of 1960s vehicles, such as Datsun Bluebird-style sedans, older American cars, and three-wheeled pedicabs (samlors). It is FORBIDDEN to show any modern cars, vans, or motorcycles.
+- **Pedestrians & Street Furniture:** The sidewalks should feature pedestrians in 1960s attire. Simple, low metal crowd control barriers may be present in front of the theatre. The road surface must be aged asphalt.
+- For the specific style of cars, clothing, and street textures, use these visual cues: '{surrounding_details_from_dataset}'.
+
+**Atmosphere:** The final image must **match the ambient lighting, weather, and time of day of the original uploaded photo.** Apply a vintage aesthetic that authentically replicates the look of 1960s color film, including its unique color science, saturation, and natural grain. Avoid artificial sepia filters or overly aggressive aging effects.
+""",
+
 }
 
 def describe_specific_images(image_paths):
