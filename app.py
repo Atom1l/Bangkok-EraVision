@@ -111,35 +111,58 @@ def index():
                 try:
                     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_upload.png")
                     file.save(temp_path)
+                    
+                    # บังคับให้รันส่วนสร้างภาพเลย โดยไม่ต้องเช็ค
+                    ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
+                    img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
 
-                    # --- ตรวจสถานที่ ---
-                    confidence = check_image_category(temp_path, place_selected)
-                    threshold = 0.8
+                    # --- บันทึกภาพ --- (ส่วนวิดีโอจะถูกคอมเมนต์ออก)
+                    images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
+                    # videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database") #<-- คอมเมนต์ออก
+                    os.makedirs(images_folder, exist_ok=True)
+                    # os.makedirs(videos_folder, exist_ok=True) #<-- คอมเมนต์ออก
 
-                    if confidence < threshold:
-                        message = f"ภาพนี้อาจไม่ใช่ {place_selected} (ความมั่นใจ {confidence:.2f})"
-                        img_file = temp_path
-                    else:
-                        ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
-                        img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
-
-                        # --- บันทึกภาพ --- (ส่วนวิดีโอจะถูกคอมเมนต์ออก)
-                        images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
-                        # videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database") #<-- คอมเมนต์ออก
-                        os.makedirs(images_folder, exist_ok=True)
-                        # os.makedirs(videos_folder, exist_ok=True) #<-- คอมเมนต์ออก
-
-                        output_img_path = get_next_filename(images_folder, ext=".png")
-                        with open(output_img_path, "wb") as f:
-                            f.write(img_bytes)
-                        img_file = output_img_path
-
-                        # --- ปิดการสร้างวิดีโอชั่วคราว ---
-                        # output_video_path = get_next_filename(videos_folder, ext=".mp4") #<-- คอมเมนต์ออก
-                        # video_file = generate_video_from_image(img_bytes, output_video_path) #<-- คอมเมนต์ออก
+                    output_img_path = get_next_filename(images_folder, ext=".png")
+                    with open(output_img_path, "wb") as f:
+                        f.write(img_bytes)
+                    img_file = output_img_path
 
                 except Exception as e:
                     message = f"Error: {str(e)}"
+
+                # === ไว้มาเปิดตอนหลัง(เชื่อมกับ classifier.py) ===
+                # try:
+                #     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_upload.png")
+                #     file.save(temp_path)
+
+                #     # --- ตรวจสถานที่ ---
+                #     confidence = check_image_category(temp_path, place_selected)
+                #     threshold = 0.8
+
+                #     if confidence < threshold:
+                #         message = f"ภาพนี้อาจไม่ใช่ {place_selected} (ความมั่นใจ {confidence:.2f})"
+                #         img_file = temp_path
+                #     else:
+                #         ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
+                #         img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
+
+                #         # --- บันทึกภาพ --- (ส่วนวิดีโอจะถูกคอมเมนต์ออก)
+                #         images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
+                #         # videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database") #<-- คอมเมนต์ออก
+                #         os.makedirs(images_folder, exist_ok=True)
+                #         # os.makedirs(videos_folder, exist_ok=True) #<-- คอมเมนต์ออก
+
+                #         output_img_path = get_next_filename(images_folder, ext=".png")
+                #         with open(output_img_path, "wb") as f:
+                #             f.write(img_bytes)
+                #         img_file = output_img_path
+
+                #         # --- ปิดการสร้างวิดีโอชั่วคราว ---
+                #         # output_video_path = get_next_filename(videos_folder, ext=".mp4") #<-- คอมเมนต์ออก
+                #         # video_file = generate_video_from_image(img_bytes, output_video_path) #<-- คอมเมนต์ออก
+
+                # except Exception as e:
+                #     message = f"Error: {str(e)}"
 
     # ตัวแปร video_file จะเป็น None และถูกส่งไปที่ template
     return render_template("index.html", message=message, img_file=img_file, video_file=video_file)
