@@ -1,3 +1,191 @@
+# #app.py
+# from flask import Flask, request, render_template, send_file
+# import openai
+# from io import BytesIO
+# import os
+# from PIL import Image
+# import base64
+# import requests
+# import glob
+# import random
+# from runwayml import RunwayML
+# from dotenv import load_dotenv
+
+# from classifier import check_image_category
+# from reference_prompt_builder import build_prompt  # <-- import ใหม่
+
+# # โหลด environment variables
+# load_dotenv()
+
+# # ตั้งค่า Flask
+# app = Flask(__name__)
+# app.config['UPLOAD_FOLDER'] = "uploads"
+# os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# # --- API Keys ---
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# RUNWAY_API_KEY = os.getenv("RUNWAY_API_KEY")
+
+# openai.api_key = OPENAI_API_KEY
+# runway_client = RunwayML(api_key=RUNWAY_API_KEY)
+
+# PROMPT_VIDEO = "Short 5-second video, gentle camera motion, vintage 1960s street style"
+
+# def get_next_filename(folder, prefix="BangkokEra", ext=".png"):
+#     os.makedirs(folder, exist_ok=True)
+#     files = glob.glob(os.path.join(folder, f"{prefix}*{ext}"))
+#     if not files:
+#         return os.path.join(folder, f"{prefix}001{ext}")
+#     numbers = [int(os.path.splitext(f)[0].split(prefix)[-1]) for f in files]
+#     next_num = max(numbers) + 1
+#     return os.path.join(folder, f"{prefix}{next_num:03d}{ext}")
+
+# def convert_image_to_1960s(image_path, place_name, reference_folder=None):
+#     """สร้างภาพ OpenAI แบบอิง reference"""
+#     allowed_exts = (".png", ".jpg", ".jpeg", ".webp")
+#     if not image_path.lower().endswith(allowed_exts):
+#         raise ValueError("Only PNG, JPG, JPEG, or WebP images are supported.")
+
+#     img = Image.open(image_path).convert("RGB")
+#     buffered = BytesIO()
+#     img.save(buffered, format="PNG")
+#     buffered.seek(0)
+
+#     # ใช้ build_prompt จาก reference_prompt_builder
+#     full_prompt = build_prompt(place_name, user_image_path=image_path)
+
+#     response = openai.images.edit(
+#         model="gpt-image-1",
+#         image=("input.png", buffered, "image/png"),
+#         prompt=full_prompt,
+#         size="1024x1024"
+#     )
+
+#     if response.data and response.data[0].b64_json:
+#         return base64.b64decode(response.data[0].b64_json)
+#     else:
+#         raise ValueError("OpenAI did not return valid image data.")
+
+# def generate_video_from_image(img_bytes, output_path="output.mp4"):
+#     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+#     task = runway_client.image_to_video.create(
+#         model="gen4_turbo",
+#         prompt_image=f"data:image/png;base64,{img_b64}",
+#         prompt_text=PROMPT_VIDEO,
+#         ratio="1280:720",
+#         duration=5
+#     ).wait_for_task_output()
+
+#     if not task.output:
+#         raise ValueError("Runway did not return a valid video URL.")
+
+#     video_url = task.output[0] if isinstance(task.output[0], str) else task.output[0].get("url")
+#     if not video_url:
+#         raise ValueError("Runway did not return a valid video URL.")
+
+#     r = requests.get(video_url)
+#     if r.status_code != 200:
+#         raise ValueError("Failed to download video from Runway.")
+
+#     with open(output_path, "wb") as f:
+#         f.write(r.content)
+
+#     return output_path
+
+# @app.route("/", methods=["GET", "POST"])
+# def index():
+#     message = ""
+#     img_file = None
+#     video_file = None
+
+#     if request.method == "POST":
+#         place_selected = request.form.get("location")
+
+#         if "image" not in request.files:
+#             message = "No file uploaded."
+#         else:
+#             file = request.files["image"]
+#             if file.filename == "":
+#                 message = "No file selected."
+#             else:
+#                 try:
+#                     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_upload.png")
+#                     file.save(temp_path)
+                    
+#                     # บังคับให้รันส่วนสร้างภาพเลย โดยไม่ต้องเช็ค
+#                     ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
+#                     img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
+
+#                     # --- บันทึกภาพ --- (ส่วนวิดีโอจะถูกคอมเมนต์ออก)
+#                     images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
+#                     # videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database") #<-- คอมเมนต์ออก
+#                     os.makedirs(images_folder, exist_ok=True)
+#                     # os.makedirs(videos_folder, exist_ok=True) #<-- คอมเมนต์ออก
+
+#                     output_img_path = get_next_filename(images_folder, ext=".png")
+#                     with open(output_img_path, "wb") as f:
+#                         f.write(img_bytes)
+#                     img_file = output_img_path
+
+#                 except Exception as e:
+#                     message = f"Error: {str(e)}"
+
+#                 # === ไว้มาเปิดตอนหลัง(เชื่อมกับ classifier.py) ===
+#                 # try:
+#                 #     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_upload.png")
+#                 #     file.save(temp_path)
+
+#                 #     # --- ตรวจสถานที่ ---
+#                 #     confidence = check_image_category(temp_path, place_selected)
+#                 #     threshold = 0.8
+
+#                 #     if confidence < threshold:
+#                 #         message = f"ภาพนี้อาจไม่ใช่ {place_selected} (ความมั่นใจ {confidence:.2f})"
+#                 #         img_file = temp_path
+#                 #     else:
+#                 #         ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
+#                 #         img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
+
+#                 #         # --- บันทึกภาพ --- (ส่วนวิดีโอจะถูกคอมเมนต์ออก)
+#                 #         images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
+#                 #         # videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database") #<-- คอมเมนต์ออก
+#                 #         os.makedirs(images_folder, exist_ok=True)
+#                 #         # os.makedirs(videos_folder, exist_ok=True) #<-- คอมเมนต์ออก
+
+#                 #         output_img_path = get_next_filename(images_folder, ext=".png")
+#                 #         with open(output_img_path, "wb") as f:
+#                 #             f.write(img_bytes)
+#                 #         img_file = output_img_path
+
+#                 #         # --- ปิดการสร้างวิดีโอชั่วคราว ---
+#                 #         # output_video_path = get_next_filename(videos_folder, ext=".mp4") #<-- คอมเมนต์ออก
+#                 #         # video_file = generate_video_from_image(img_bytes, output_video_path) #<-- คอมเมนต์ออก
+
+#                 # except Exception as e:
+#                 #     message = f"Error: {str(e)}"
+
+#     # ตัวแปร video_file จะเป็น None และถูกส่งไปที่ template
+#     return render_template("index.html", message=message, img_file=img_file, video_file=video_file)
+
+# @app.route("/image")
+# def image():
+#     images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
+#     latest_image = get_next_filename(images_folder, ext=".png")
+#     latest_image = os.path.join(images_folder, f"BangkokEra{int(latest_image[-7:-4])-1:03d}.png")
+#     return send_file(latest_image, mimetype="image/png")
+
+# @app.route("/video")
+# def video():
+#     videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database")
+#     latest_video = get_next_filename(videos_folder, ext=".mp4")
+#     latest_video = os.path.join(videos_folder, f"BangkokEra{int(latest_video[-7:-4])-1:03d}.mp4")
+#     return send_file(latest_video, mimetype="video/mp4")
+
+# if __name__ == "__main__":
+#     app.run(debug=True)
+
+#================================================================================================================================#
+
 #app.py
 from flask import Flask, request, render_template, send_file
 import openai
@@ -11,8 +199,17 @@ import random
 from runwayml import RunwayML
 from dotenv import load_dotenv
 
-from classifier import check_image_category
-from reference_prompt_builder import build_prompt  # <-- import ใหม่
+# --- [MODIFIED!] ---
+# ลบ import เก่า: from classifier import check_image_category
+# เพิ่ม import ใหม่ทั้งหมดจาก classifier.py
+from classifier import (
+    model, processor, device, ALL_PLACES, REFERENCE_DIR,
+    preprocess_reference_images, hybrid_classifier,
+    classify_by_reference 
+)
+# --- [END MODIFIED] ---
+
+from reference_prompt_builder import build_prompt
 
 # โหลด environment variables
 load_dotenv()
@@ -31,7 +228,25 @@ runway_client = RunwayML(api_key=RUNWAY_API_KEY)
 
 PROMPT_VIDEO = "Short 5-second video, gentle camera motion, vintage 1960s street style"
 
+# เกณฑ์สำหรับ Reference (ต่ำกว่าได้)
+REF_CONFIDENCE_THRESHOLD = 0.50
+# --- [END NEW] ---
+
+# --- [NEW!] ---
+# ==========================================================
+# ส่วนที่ 1: โหลดโมเดลและเตรียมข้อมูล (ทำครั้งเดียวตอน app.py เริ่มทำงาน)
+# ==========================================================
+print("กำลังประมวลผลภาพอ้างอิง (ทำครั้งเดียว)...")
+# เราใช้ตัวแปร (model, processor, device) ที่ import มาจาก classifier.py
+REFERENCE_FEATURES, REFERENCE_LABELS = preprocess_reference_images(
+    REFERENCE_DIR, ALL_PLACES, processor, model, device
+)
+print("--- ✅ Server พร้อมทำงานแล้ว! ---")
+# --- [END NEW] ---
+
+
 def get_next_filename(folder, prefix="BangkokEra", ext=".png"):
+    # ... (ฟังก์ชันนี้เหมือนเดิม) ...
     os.makedirs(folder, exist_ok=True)
     files = glob.glob(os.path.join(folder, f"{prefix}*{ext}"))
     if not files:
@@ -41,7 +256,7 @@ def get_next_filename(folder, prefix="BangkokEra", ext=".png"):
     return os.path.join(folder, f"{prefix}{next_num:03d}{ext}")
 
 def convert_image_to_1960s(image_path, place_name, reference_folder=None):
-    """สร้างภาพ OpenAI แบบอิง reference"""
+    # ... (ฟังก์ชันนี้เหมือนเดิม) ...
     allowed_exts = (".png", ".jpg", ".jpeg", ".webp")
     if not image_path.lower().endswith(allowed_exts):
         raise ValueError("Only PNG, JPG, JPEG, or WebP images are supported.")
@@ -51,7 +266,6 @@ def convert_image_to_1960s(image_path, place_name, reference_folder=None):
     img.save(buffered, format="PNG")
     buffered.seek(0)
 
-    # ใช้ build_prompt จาก reference_prompt_builder
     full_prompt = build_prompt(place_name, user_image_path=image_path)
 
     response = openai.images.edit(
@@ -67,6 +281,7 @@ def convert_image_to_1960s(image_path, place_name, reference_folder=None):
         raise ValueError("OpenAI did not return valid image data.")
 
 def generate_video_from_image(img_bytes, output_path="output.mp4"):
+    # ... (ฟังก์ชันนี้เหมือนเดิม แต่ไม่ได้ถูกเรียกใช้) ...
     img_b64 = base64.b64encode(img_bytes).decode("utf-8")
     task = runway_client.image_to_video.create(
         model="gen4_turbo",
@@ -96,10 +311,12 @@ def generate_video_from_image(img_bytes, output_path="output.mp4"):
 def index():
     message = ""
     img_file = None
-    video_file = None
+    video_file = None 
+    selected_location = None 
 
     if request.method == "POST":
         place_selected = request.form.get("location")
+        selected_location = place_selected 
 
         if "image" not in request.files:
             message = "No file uploaded."
@@ -109,66 +326,76 @@ def index():
                 message = "No file selected."
             else:
                 try:
-                    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_upload.png")
+                    # 1. บันทึกไฟล์ชั่วคราว
+                    temp_filename = "temp_upload.png" 
+                    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
                     file.save(temp_path)
+
+                    # --- [MODIFIED!] ---
+                    # 2. เรียกใช้ Method 2 (Reference) โดยตรง
+                    print(f"User selected: {place_selected}")
+                    print(f"\n--- 1. เริ่มจำแนกภาพ (Method 2 Only): {temp_path} ---")
                     
-                    # บังคับให้รันส่วนสร้างภาพเลย โดยไม่ต้องเช็ค
-                    ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
-                    img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
+                    predicted_place, score = classify_by_reference(
+                        temp_path, 
+                        REFERENCE_FEATURES,  # <-- จาก Global
+                        REFERENCE_LABELS,   # <-- จาก Global
+                        processor, 
+                        model, 
+                        device
+                    )
+                    
+                    print(f"[Method 2: Reference] ทายว่า: {predicted_place} (ความมั่นใจ: {score:.4f})")
 
-                    # --- บันทึกภาพ --- (ส่วนวิดีโอจะถูกคอมเมนต์ออก)
-                    images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
-                    # videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database") #<-- คอมเมนต์ออก
-                    os.makedirs(images_folder, exist_ok=True)
-                    # os.makedirs(videos_folder, exist_ok=True) #<-- คอมเมนต์ออก
+                    # 3. ตรวจสอบผลลัพธ์
+                    
+                    # กรณีที่ 1: คะแนนต่ำเกินไป (ไม่มั่นใจเลย)
+                    if score < REF_CONFIDENCE_THRESHOLD:
+                        message = f"Classifier FAIL: ไม่สามารถระบุสถานที่ได้ (คะแนนความมั่นใจต่ำเกินไป: {score:.2f})"
+                        img_file = temp_filename # แสดงภาพต้นฉบับกลับไป
+                        
+                    # กรณีที่ 2: AI ทายว่าเป็น "Other" (ภาพไม่เกี่ยวข้อง)
+                    elif predicted_place == "Other":
+                        message = f"Classifier FAIL: ภาพนี้ดูเหมือนจะไม่ใช่สถานที่ใดๆ ที่รองรับ (AI ทายว่าเป็น 'Other' มั่นใจ {score:.2f})"
+                        img_file = temp_filename # แสดงภาพต้นฉบับกลับไป
+                        
+                    # กรณีที่ 3: AI ทายไม่ตรงกับที่ผู้ใช้เลือก
+                    elif predicted_place != place_selected:
+                        message = f"Classifier FAIL: คุณเลือก '{place_selected}' แต่ AI ทายว่าภาพนี้คือ '{predicted_place}' (มั่นใจ {score:.2f})"
+                        img_file = temp_filename # แสดงภาพต้นฉบับกลับไป
+                        
+                    # กรณีที่ 4: สำเร็จ! (ทายตรง & คะแนนผ่านเกณฑ์ & ไม่ใช่ Other)
+                    else:
+                        message = f"Classifier SUCCESS: ยืนยันสถานที่: {predicted_place} (มั่นใจ {score:.2f}) - กำลังสร้างภาพ 1960s..."
+                        
+                        # --- 4.1 เรียกใช้การสร้างภาพ ---
+                        img_bytes = convert_image_to_1960s(temp_path, place_name=predicted_place, reference_folder=None)
 
-                    output_img_path = get_next_filename(images_folder, ext=".png")
-                    with open(output_img_path, "wb") as f:
-                        f.write(img_bytes)
-                    img_file = output_img_path
+                        # --- 4.2 บันทึกภาพผลลัพธ์ ---
+                        images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
+                        os.makedirs(images_folder, exist_ok=True)
+                        output_img_path = get_next_filename(images_folder, ext=".png")
+                        with open(output_img_path, "wb") as f:
+                            f.write(img_bytes)
+                        
+                        img_file = output_img_path # ส่ง path ภาพที่สร้างเสร็จไปให้ HTML
+                        
+                    # --- [END MODIFIED] ---
 
                 except Exception as e:
                     message = f"Error: {str(e)}"
-
-                # === ไว้มาเปิดตอนหลัง(เชื่อมกับ classifier.py) ===
-                # try:
-                #     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_upload.png")
-                #     file.save(temp_path)
-
-                #     # --- ตรวจสถานที่ ---
-                #     confidence = check_image_category(temp_path, place_selected)
-                #     threshold = 0.8
-
-                #     if confidence < threshold:
-                #         message = f"ภาพนี้อาจไม่ใช่ {place_selected} (ความมั่นใจ {confidence:.2f})"
-                #         img_file = temp_path
-                #     else:
-                #         ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
-                #         img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
-
-                #         # --- บันทึกภาพ --- (ส่วนวิดีโอจะถูกคอมเมนต์ออก)
-                #         images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
-                #         # videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database") #<-- คอมเมนต์ออก
-                #         os.makedirs(images_folder, exist_ok=True)
-                #         # os.makedirs(videos_folder, exist_ok=True) #<-- คอมเมนต์ออก
-
-                #         output_img_path = get_next_filename(images_folder, ext=".png")
-                #         with open(output_img_path, "wb") as f:
-                #             f.write(img_bytes)
-                #         img_file = output_img_path
-
-                #         # --- ปิดการสร้างวิดีโอชั่วคราว ---
-                #         # output_video_path = get_next_filename(videos_folder, ext=".mp4") #<-- คอมเมนต์ออก
-                #         # video_file = generate_video_from_image(img_bytes, output_video_path) #<-- คอมเมนต์ออก
-
-                # except Exception as e:
-                #     message = f"Error: {str(e)}"
-
-    # ตัวแปร video_file จะเป็น None และถูกส่งไปที่ template
-    return render_template("index.html", message=message, img_file=img_file, video_file=video_file)
+                
+    return render_template(
+        "index.html", 
+        message=message, 
+        img_file=img_file, 
+        video_file=video_file,
+        selected_location=selected_location 
+    )
 
 @app.route("/image")
 def image():
+    # ... (ฟังก์ชันนี้เหมือนเดิม) ...
     images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
     latest_image = get_next_filename(images_folder, ext=".png")
     latest_image = os.path.join(images_folder, f"BangkokEra{int(latest_image[-7:-4])-1:03d}.png")
@@ -176,6 +403,7 @@ def image():
 
 @app.route("/video")
 def video():
+    # ... (ฟังก์ชันนี้เหมือนเดิม) ...
     videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database")
     latest_video = get_next_filename(videos_folder, ext=".mp4")
     latest_video = os.path.join(videos_folder, f"BangkokEra{int(latest_video[-7:-4])-1:03d}.mp4")

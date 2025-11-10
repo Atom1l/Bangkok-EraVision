@@ -24,80 +24,79 @@ PLACE_NAME_TO_FOLDER = {
 
 # --- คลัง PROMPT เฉพาะสถานที่ (ส่วนที่ 1: เพิ่มเข้ามาใหม่) ---
 LOCATION_SPECIFIC_PROMPTS = {
-    # ====== ราชดำเนินกลาง-อนุสาวรีย์ประชาธิปไตย ======
-    "Ratchadamnoen Avenue – Democracy Monument": """
-Your task is to modify the uploaded photo. Adherence to the following rules is absolute and mandatory. **Your PRIMARY GOAL is to preserve the existing layout and follow the explicit structural rules below.**
+#     # ====== ราชดำเนินกลาง-อนุสาวรีย์ประชาธิปไตย ======
+#     "Ratchadamnoen Avenue – Democracy Monument": """
+# Your task is to modify the uploaded photo. Adherence to the following rules is absolute and mandatory. **Your PRIMARY GOAL is to preserve the existing layout and follow the explicit structural rules below.**
 
-**Rule 1: The Monument (Preservation)**
-- The monument's form, placement, and perspective MUST be preserved.
-- ALL existing surface details (carvings, lion-heads) MUST be retained and enhanced, NOT replaced.
-- Remove the brush or small plants at the monument's base.
-- For subtle texture inspiration ONLY (do NOT alter structure based on this), consider visual cues like: '{landmark_details_from_dataset}'.
+# **Rule 1: The Monument (Preservation)**
+# - The monument's form, placement, and perspective MUST be preserved.
+# - ALL existing surface details (carvings, lion-heads) MUST be retained and enhanced, NOT replaced.
+# - Remove the brush or small plants at the monument's base.
+# - For subtle texture inspiration ONLY (do NOT alter structure based on this), consider visual cues like: '{landmark_details_from_dataset}'.
 
-**Rule 2: Surrounding Area - Transformation Based on Original Composition**
-- Transform EXISTING elements following the strict rules below.
+# **Rule 2: Surrounding Area - Transformation Based on Original Composition**
+# - Transform EXISTING elements following the strict rules below.
 
-- **Area A: The Urban Layout (Conditional Rules)**
-  - (Keep all conditional layout rules as they are - Central Median, Lampposts, Road Surface)
+# - **Area A: The Urban Layout (Conditional Rules)**
+#   - (Keep all conditional layout rules as they are - Central Median, Lampposts, Road Surface)
 
-- **Area B: Building Architecture by Zone (Strict Structural Rules)**
-  - **Architectural Uniformity Rule:** Zone 2 buildings MUST be a continuous, uniform block.
-  - **Facade Rhythm Rule:** Zone 2 facade is NOT flat, must have rhythmic protruding/recessed bays.
-  - **Zone 1 (Circle/Corners):** Buildings MUST be smaller, 2-3 story commercial.
-  - **Zone 2 (Main Avenue):** Buildings MUST be the large, blocky, reddish-orange Modernist style described above.
-  - **Zone 3 (Deep Background):** MUST transition to a dense, low-rise area.
+# - **Area B: Building Architecture by Zone (Strict Structural Rules)**
+#   - **Architectural Uniformity Rule:** Zone 2 buildings MUST be a continuous, uniform block.
+#   - **Facade Rhythm Rule:** Zone 2 facade is NOT flat, must have rhythmic protruding/recessed bays.
+#   - **Zone 1 (Circle/Corners):** Buildings MUST be smaller, 2-3 story commercial.
+#   - **Zone 2 (Main Avenue):** Buildings MUST be the large, blocky, reddish-orange Modernist style described above.
+#   - **Zone 3 (Deep Background):** MUST transition to a dense, low-rise area.
 
-- **General Details for All Buildings:**
-  - Buildings MUST look aged and imperfect.
-  - Windows MUST be simple, sharp, 90-degree rectangles.
-  - The street MUST be populated with 1960s vehicles.
-  - **For subtle texture and weathering ONLY (do NOT change structure/color based on this),** consider visual cues like: '{surrounding_details_from_dataset}'.
+# - **General Details for All Buildings:**
+#   - Buildings MUST look aged and imperfect.
+#   - Windows MUST be simple, sharp, 90-degree rectangles.
+#   - The street MUST be populated with 1960s vehicles.
+#   - **For subtle texture and weathering ONLY (do NOT change structure/color based on this),** consider visual cues like: '{surrounding_details_from_dataset}'.
 
-**Atmosphere:**
-- (Keep atmosphere rules as they are)
-"""
-# (Apply similar "subtle texture inspiration ONLY" wording to other prompts)
-,
+# **Atmosphere:**
+# - (Keep atmosphere rules as they are)
+# """
+# # (Apply similar "subtle texture inspiration ONLY" wording to other prompts)
+# ,
 
-    # ====== เยาวราช ======
-    "Yaowarat (Chinatown)": """
-Your task is to edit the uploaded photo with two distinct rules:
+#     # ====== เยาวราช ======
+#     "Yaowarat (Chinatown)": """
+# Your task is to edit the uploaded photo with two distinct rules:
 
-**Rule 1: Main Building/Landmark in User's Photo**
-- **Strictly preserve the architectural form of the main building the user has focused on.**
-- **For its textures and fine details, draw inspiration from these visual descriptions:** '{landmark_details_from_dataset}'.
+# **Rule 1: Main Building/Landmark in User's Photo**
+# - **Strictly preserve the architectural form of the main building the user has focused on.**
 
-**Rule 2: The rest of the Yaowarat Street Scene**
-- **Transform the entire surrounding environment into a bustling 1960s Yaowarat street.**
-- **Base the style of the shophouses, signs, and street elements on these specific visual cues:** '{surrounding_details_from_dataset}'.
-- Add numerous vertical neon signs in both Chinese and Thai characters, and crowd the street with pedicabs (samlors) and vintage cars.
+# **Rule 2: The rest of the Yaowarat Street Scene**
+# - **Transform the entire surrounding environment into a bustling 1960s Yaowarat street.**
+# - **Base the style of the shophouses, signs, and street elements on these specific visual cues:** '{surrounding_details_from_dataset}'.
+# - Add numerous vertical neon signs in both Chinese and Thai characters, and crowd the street with pedicabs (samlors) and vintage cars.
 
-**Atmosphere:** The final image must be energetic and vibrant, capturing the spirit of 1960s Chinatown.
-""",
+# **Atmosphere:** The final image must be energetic and vibrant, capturing the spirit of 1960s Chinatown.
+# """,
 
-    # ====== ศาลาเฉลิมกรุง ======
-    "Sala Chalermkrung Royal Theatre": """
-Your task is to modify the uploaded photo. Adherence to the following rules is absolute and mandatory.
+#     # ====== ศาลาเฉลิมกรุง ======
+#     "Sala Chalermkrung Royal Theatre": """
+# Your task is to modify the uploaded photo. Adherence to the following rules is absolute and mandatory.
 
-**Rule 1: Core Architecture (Preservation)**
-- The fundamental architectural form, perspective, and placement of the Sala Chalermkrung theatre building MUST be strictly preserved as it appears in the uploaded photo.
-- Key unchangeable features include its modernist blocky structure, the distinct corner entrance, the rows of upper-floor windows, and the circular decorative medallions below the roofline.
-- For fine details like the texture of the concrete and the design of the rooftop neon sign structure, draw inspiration from these visual cues: '{landmark_details_from_dataset}'.
+# **Rule 1: Core Architecture (Preservation)**
+# - The fundamental architectural form, perspective, and placement of the Sala Chalermkrung theatre building MUST be strictly preserved as it appears in the uploaded photo.
+# - Key unchangeable features include its modernist blocky structure, the distinct corner entrance, the rows of upper-floor windows, and the circular decorative medallions below the roofline.
+# - For fine details like the texture of the concrete and the design of the rooftop neon sign structure, draw inspiration from these visual cues: '{landmark_details_from_dataset}'.
 
-**Rule 2: Theatrical Facade Decoration (Transformation)**
-- This is your primary transformation task. The building's facade MUST be adorned as a classic 1960s Thai movie palace.
-- **Hand-Painted Billboards:** Large sections of the upper facade MUST be covered with massive, hand-painted movie billboards. These billboards must depict scenes and actors characteristic of 1960s Thai cinema, featuring rich colors and a painterly style.
-- **Character Cut-outs:** It is MANDATORY to add at least one large, painted wooden cut-out figure of a movie star. This figure should be placed prominently, either on the marquee above the entrance or standing at street level in front of the theatre.
-- **Marquee & Banners:** The marquee above the entrance must be decorated with smaller, hand-lettered banners and signs announcing the current film's title and stars in Thai script.
+# **Rule 2: Theatrical Facade Decoration (Transformation)**
+# - This is your primary transformation task. The building's facade MUST be adorned as a classic 1960s Thai movie palace.
+# - **Hand-Painted Billboards:** Large sections of the upper facade MUST be covered with massive, hand-painted movie billboards. These billboards must depict scenes and actors characteristic of 1960s Thai cinema, featuring rich colors and a painterly style.
+# - **Character Cut-outs:** It is MANDATORY to add at least one large, painted wooden cut-out figure of a movie star. This figure should be placed prominently, either on the marquee above the entrance or standing at street level in front of the theatre.
+# - **Marquee & Banners:** The marquee above the entrance must be decorated with smaller, hand-lettered banners and signs announcing the current film's title and stars in Thai script.
 
-**Rule 3: The Surrounding Street Scene (Contextual Transformation)**
-- The street and sidewalks must be transformed to reflect a 1960s Bangkok setting.
-- **Vehicles:** The street MUST be populated with a realistic mix of 1960s vehicles, such as Datsun Bluebird-style sedans, older American cars, and three-wheeled pedicabs (samlors). It is FORBIDDEN to show any modern cars, vans, or motorcycles.
-- **Pedestrians & Street Furniture:** The sidewalks should feature pedestrians in 1960s attire. Simple, low metal crowd control barriers may be present in front of the theatre. The road surface must be aged asphalt.
-- For the specific style of cars, clothing, and street textures, use these visual cues: '{surrounding_details_from_dataset}'.
+# **Rule 3: The Surrounding Street Scene (Contextual Transformation)**
+# - The street and sidewalks must be transformed to reflect a 1960s Bangkok setting.
+# - **Vehicles:** The street MUST be populated with a realistic mix of 1960s vehicles, such as Datsun Bluebird-style sedans, older American cars, and three-wheeled pedicabs (samlors). It is FORBIDDEN to show any modern cars, vans, or motorcycles.
+# - **Pedestrians & Street Furniture:** The sidewalks should feature pedestrians in 1960s attire. Simple, low metal crowd control barriers may be present in front of the theatre. The road surface must be aged asphalt.
+# - For the specific style of cars, clothing, and street textures, use these visual cues: '{surrounding_details_from_dataset}'.
 
-**Atmosphere:** The final image must **match the ambient lighting, weather, and time of day of the original uploaded photo.** Apply a vintage aesthetic that authentically replicates the look of 1960s color film, including its unique color science, saturation, and natural grain. Avoid artificial sepia filters or overly aggressive aging effects.
-""",
+# **Atmosphere:** The final image must **match the ambient lighting, weather, and time of day of the original uploaded photo.** Apply a vintage aesthetic that authentically replicates the look of 1960s color film, including its unique color science, saturation, and natural grain. Avoid artificial sepia filters or overly aggressive aging effects.
+# """,
 
 }
 
