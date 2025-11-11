@@ -204,7 +204,7 @@ from dotenv import load_dotenv
 # เพิ่ม import ใหม่ทั้งหมดจาก classifier.py
 from classifier import (
     model, processor, device, ALL_PLACES, REFERENCE_DIR,
-    preprocess_reference_images, hybrid_classifier,
+    preprocess_reference_images,
     classify_by_reference 
 )
 # --- [END MODIFIED] ---
@@ -334,7 +334,7 @@ def index():
                     # --- [MODIFIED!] ---
                     # 2. เรียกใช้ Method 2 (Reference) โดยตรง
                     print(f"User selected: {place_selected}")
-                    print(f"\n--- 1. เริ่มจำแนกภาพ (Method 2 Only): {temp_path} ---")
+                    print(f"\n--- 1. เริ่มจำแนกภาพ: {temp_path} ---")
                     
                     predicted_place, score = classify_by_reference(
                         temp_path, 
