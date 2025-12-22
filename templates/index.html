@@ -54,14 +54,6 @@
             object-position: center;
         }
         
-        .logo-placeholder {
-            font-family: 'Playfair Display', serif;
-            font-weight: bold;
-            font-size: 32px;
-            color: #8b7355;
-            text-align: center;
-        }
-        
         /* Navigation */
         .nav-container {
             border-top: 2px solid #8b7355;
@@ -170,7 +162,7 @@
             text-align: center;
             padding: 2px;
             margin-bottom: 30px;
-            font-family: 'TS-Prachachon-NP', serif;
+            font-family: serif; 
             font-size: 58px;
             font-weight: 600;
             letter-spacing: 2px;
@@ -180,7 +172,7 @@
             display: flex;
             gap: 30px;
             align-items: flex-start;
-            font-family: 'PS Pimpdeed', monospace;
+            font-family: monospace;
             font-size: 25px;
             margin-bottom: 40px;
         }
@@ -285,9 +277,6 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
             user-select: none;
         }
         
@@ -457,7 +446,7 @@
             margin-bottom: 5px;
         }
 
-        .modal-video {
+        .modal-image {
             width: 100%;
             border-radius: 6px;
             display: block;
@@ -465,7 +454,7 @@
 
         .modal-disclaimer {
             font-size: 11px;
-            color: red; /*#8b8b8b*/
+            color: red;
             font-style: italic;
             margin-bottom: 20px;
             text-align: center;
@@ -494,8 +483,13 @@
             margin-bottom: 20px;
             border-radius: 6px;
             font-weight: 500;
+            display: none;
         }
         
+        .message.show {
+            display: block;
+        }
+
         .message.success {
             background-color: #d4edda;
             color: #155724;
@@ -590,15 +584,13 @@
     </style>
 </head>
 <body>
-<!-- Header -->
 <div class="header">
     <div class="logo">
-        <img src="{{ url_for('static', filename='images/headlogo.png') }}" alt="Bangkok EraVision Logo" width="80" height="80">
+        <img src="static/images/headlogo.png" alt="Bangkok EraVision Logo" width="80" height="80">
     </div>
     <p class="header-subtext"></p>
 </div>
 
-    <!-- Navigation -->
     <div class="nav-container">
         <div class="nav">
             <div class="nav-left">
@@ -614,13 +606,12 @@
     </div>
 
     <div class="container">
-        <!-- Hero Section -->
         <div class="hero-section">
             <h1 class="hero-title">What is Bangkok EraVision?</h1>
             
             <div class="hero-content">
                 <div class="hero-image">
-                    <img src="{{ url_for('static', filename='images/herocontentpics.jpg') }}" alt="Hero Image">
+                    <img src="static/images/herocontentpics.jpg" alt="Hero Image">
                 </div>
                 <div class="hero-text">
                     <p>Bangkok EraVision is a website that takes you back to Phra Nakhon in the 1960s through a fresh perspective using city simulation technology...</p>
@@ -630,20 +621,20 @@
             </div>
         </div>
 
-        <!-- Divider -->
         <div class="divider">
             <span class="divider-icon">❦</span>
         </div>
 
-        <!-- Upload Section -->
         <div class="upload-section">
-            {% if message %}
-                <div class="message {{ 'success' if 'success' in message.lower() else 'error' }}">{{ message }}</div>
-            {% endif %}
+            
+            <div id="messageContainer">
+                {% if message %}
+                    <div class="message {{ 'success' if 'success' in message.lower() else 'error' }} show">{{ message }}</div>
+                {% endif %}
+            </div>
 
-            <form method="POST" enctype="multipart/form-data" id="uploadForm">
+            <form enctype="multipart/form-data" id="uploadForm">
                 <div class="upload-container">
-                    <!-- Location Selection -->
                     <div class="form-group form-group-tight">
                         <div class="section-title">Choose a location</div>
                         <select class="location-selector" id="locationSelect" title="Choose Bangkok location" aria-label="Select Bangkok location" name="location">
@@ -660,7 +651,6 @@
                         <div class="location-error" id="locationError">Please choose your location first</div>
                     </div>
 
-                    <!-- Photo Upload -->
                     <div class="form-group form-group-tight">
                         <div class="section-title">Upload your Photo</div>
                         <div class="upload-area" id="uploadArea">
@@ -674,39 +664,24 @@
                     </div>
                 </div>
 
-                <!-- Generate Button -->
                 <div class="generate-btn-wrapper">
                     <button type="submit" class="generate-btn" id="generateBtn">Generate</button>
                 </div>
             </form>
         </div>
 
-        <!-- Loading Animation -->
         <div class="loading" id="loading">
             <div class="loading-spinner"></div>
             <p>Transforming your image to 1960s Bangkok...</p>
         </div>
     </div>
 
-    <!-- Result Modal -->
-    <!-- <div id="resultModal" class="modal" data-location="{{ request.form.get('location', '') if video_file else '' }}"> -->
-    <div id="resultModal" class="modal" data-location="{{ request.form.get('location', '') if img_file else '' }}">
+    <div id="resultModal" class="modal">
         <div class="modal-content">
             <button class="modal-close" id="modalClose">&times;</button>
             
-            <!-- <div class="modal-video-frame">
-                <video class="modal-video" id="modalVideo" controls loop autoplay muted>
-                    {% if video_file %}
-                    <source src="{{ url_for('video') }}" type="video/mp4">
-                    {% endif %}
-                    Your browser does not support the video tag.
-                </video>
-            </div> -->
-
             <div class="modal-video-frame">
-                {% if img_file %}
-                <img src="{{ url_for('image') }}" alt="Generated 1960s Image" class="modal-video" id="modalImage">
-                {% endif %}
+                <img src="" alt="Generated 1960s Image" class="modal-image" id="modalImage" style="display: none;">
             </div>
 
             <p class="modal-disclaimer">* These created images are only simulations and technological reconstructions and aren't images or facts of the places in the 1960s.</p>
@@ -718,26 +693,19 @@
     </div>
 
     <script>
-        // Location descriptions - คุณสามารถแก้ไขเนื้อหาตรงนี้ได้
+        // Location descriptions
         const locationDescriptions = {
-            'ratchadamnoen-democracy': 'Ratchadamnoen Avenue was designed by King Rama V in the late 19th century, inspired by the grand boulevards of Europe. In the 1960s, this historic avenue connected the Grand Palace to Dusit Palace and served as the heart of Bangkok\'s political and ceremonial life. The Democracy Monument, completed in 1939, stands as a symbol of Thailand\'s transition to constitutional monarchy.',
-            'sala-chalermkrung': 'Sala Chalermkrung Royal Theatre, built in 1933, was Thailand\'s first cinema with air conditioning and modern amenities. During the 1960s, it was the premier venue for theatrical performances and traditional Thai masked drama (Khon). The Art Deco architecture made it one of Bangkok\'s most glamorous entertainment destinations.',
-            'giant-swing-wat-suthat': 'The Giant Swing (Sao Ching Cha) was originally used for a Brahmin ceremony until 1935. In the 1960s, it stood as an iconic landmark in front of Wat Suthat, one of Bangkok\'s oldest and most beautiful temples. The area was bustling with local vendors and worshippers, maintaining its spiritual significance.',
-            'khao-san': 'In the 1960s, Khao San Road was a quiet residential area with rice warehouses, which gave it its name (Khao San means "milled rice"). The street had not yet transformed into the backpacker haven it would become in later decades. Local families lived in traditional wooden houses along this tree-lined street.',
-            'phra-sumen-santichaiprakan': 'Phra Sumen Fort, one of only two remaining forts from Bangkok\'s 14 original defensive fortresses, stood guard along the Chao Phraya River. In the 1960s, the area around the fort was less developed, offering peaceful riverside views. Santichaiprakan Park was a quiet retreat for locals seeking respite from the city.',
-            'national-museum': 'The National Museum Bangkok, established in 1874, housed Thailand\'s most extensive collection of art and artifacts. During the 1960s, it served as an important educational institution, preserving Thai culture and history during a period of rapid modernization. The museum grounds, formerly part of the Wang Na Palace, retained their regal atmosphere.',
-            'yaowarat': 'Yaowarat, Bangkok\'s Chinatown, was already a vibrant commercial hub in the 1960s. The streets were lined with gold shops, traditional Chinese medicine stores, and food vendors. Neon signs in Chinese characters illuminated the narrow lanes, creating a distinctive atmosphere that blended Thai and Chinese cultures.',
-            'sanam-luang': 'Sanam Luang (The Royal Field) served as Bangkok\'s ceremonial center in the 1960s. This vast open space hosted royal ceremonies, including cremations and the annual Royal Ploughing Ceremony. Locals also used it for recreation, flying kites and gathering for festivals, making it both sacred and communal space.'
+            'Ratchadamnoen Avenue – Democracy Monument': 'Ratchadamnoen Avenue was designed by King Rama V in the late 19th century...',
+            'Sala Chalermkrung Royal Theatre': 'Sala Chalermkrung Royal Theatre, built in 1933...',
+            'Giant Swing – Wat Suthat': 'The Giant Swing (Sao Ching Cha) was originally used for a Brahmin ceremony...',
+            'Khao San Road': 'In the 1960s, Khao San Road was a quiet residential area...',
+            'Phra Sumen Fort – Santichaiprakan Park': 'Phra Sumen Fort, one of only two remaining forts...',
+            'National Museum Bangkok': 'The National Museum Bangkok, established in 1874...',
+            'Yaowarat (Chinatown)': 'Yaowarat, Bangkok\'s Chinatown, was already a vibrant commercial hub...',
+            'Sanam Luang (Royal Field)': 'Sanam Luang (The Royal Field) served as Bangkok\'s ceremonial center...'
         };
 
-        // Get location display name
-        function getLocationDisplayName(value) {
-            const select = document.getElementById('locationSelect');
-            const option = select.querySelector(`option[value="${value}"]`);
-            return option ? option.textContent : '';
-        }
-
-        // File upload validation and handling
+        // --- DOM Elements ---
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('image');
         const form = document.getElementById('uploadForm');
@@ -747,8 +715,26 @@
         const locationError = document.getElementById('locationError');
         const resultModal = document.getElementById('resultModal');
         const modalClose = document.getElementById('modalClose');
+        const modalImage = document.getElementById('modalImage');
+        const messageContainer = document.getElementById('messageContainer');
 
-        // Check if location is selected before allowing file selection
+        // ==========================================
+        // 🛠️ ฟังก์ชันช่วยแสดงข้อความ (แก้ไขแล้ว: เพิ่ม class 'show')
+        // ==========================================
+        function showMessage(text, type) {
+            // type: 'success' หรือ 'error'
+            // ✨ ต้องมี class "show" เพื่อให้ CSS display: block ทำงาน ✨
+            messageContainer.innerHTML = `<div class="message ${type} show">${text}</div>`;
+            
+            messageContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function hideMessage() {
+            messageContainer.innerHTML = '';
+        }
+
+        // --- Helper Functions ---
+
         function validateLocationSelected() {
             if (!locationSelect.value) {
                 locationError.classList.add('show');
@@ -760,7 +746,26 @@
             return true;
         }
 
-        // Location select change event
+        function updateUploadArea(file) {
+            const uploadText = uploadArea.querySelector('.upload-text');
+            uploadText.textContent = `Selected: ${file.name}`;
+            uploadArea.classList.add('file-selected');
+        }
+
+        function showResultModal(locationValue) {
+            const locationName = locationValue;
+            const description = locationDescriptions[locationValue] || 'Experience the historic charm of this iconic Bangkok location from the 1960s.';
+            
+            document.getElementById('modalLocationName').textContent = locationName;
+            document.getElementById('modalLocationDescription').textContent = description;
+            
+            modalImage.style.display = 'block';
+            resultModal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // --- Event Listeners ---
+
         locationSelect.addEventListener('change', () => {
             if (locationSelect.value) {
                 locationError.classList.remove('show');
@@ -768,37 +773,24 @@
             }
         });
 
-        // Click anywhere in upload area to select file
         uploadArea.addEventListener('click', (e) => {
-            // Don't trigger if clicking on the label itself
-            if (e.target.classList.contains('file-input-label')) {
-                return;
-            }
-            
+            if (e.target.classList.contains('file-input-label')) return;
             if (!validateLocationSelected()) {
                 e.stopPropagation();
                 return;
             }
-            
-            // Trigger file input click
             fileInput.click();
         });
 
-        // Prevent default click on label to avoid double trigger
         document.querySelector('.file-input-label').addEventListener('click', (e) => {
             if (!validateLocationSelected()) {
                 e.preventDefault();
-                return;
             }
         });
 
-        // Drag and drop events
         uploadArea.addEventListener('dragover', (e) => {
-            if (!validateLocationSelected()) {
-                e.preventDefault();
-                return;
-            }
             e.preventDefault();
+            if (!validateLocationSelected()) return;
             uploadArea.classList.add('dragover');
         });
 
@@ -809,10 +801,7 @@
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
-            if (!validateLocationSelected()) {
-                return;
-            }
+            if (!validateLocationSelected()) return;
             
             const files = e.dataTransfer.files;
             if (files.length > 0) {
@@ -821,75 +810,89 @@
             }
         });
 
-        // File input change
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) {
                 updateUploadArea(fileInput.files[0]);
             }
         });
 
-        // Update upload area when file is selected
-        function updateUploadArea(file) {
-            const uploadText = uploadArea.querySelector('.upload-text');
-            uploadText.textContent = `Selected: ${file.name}`;
-            uploadArea.classList.add('file-selected');
-        }
-
-        // Form submission with loading animation
-        form.addEventListener('submit', (e) => {
-            if (!validateLocationSelected()) {
-                e.preventDefault();
+        // ==========================================
+        // 🚀 ส่วน Form Submit (Logic 2 Steps)
+        // ==========================================
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!validateLocationSelected()) return;
+            if (fileInput.files.length === 0) {
+                showMessage('Please select an image file to upload.', 'error');
                 return;
             }
-            
+
+            // เริ่มต้นทำงาน
             generateBtn.disabled = true;
-            generateBtn.textContent = 'Generating...';
+            generateBtn.textContent = 'Checking Image...';
             loading.style.display = 'block';
-        });
+            hideMessage(); 
 
-        // Show modal if video exists
-        // window.addEventListener('load', () => {
-        //     const modal = document.getElementById('resultModal');
-        //     const selectedLocation = modal.getAttribute('data-location');
-        //     const videoSource = document.querySelector('#modalVideo source');
-            
-        //     // Check if we have a video result to show
-        //     if (selectedLocation && videoSource && videoSource.src) {
-        //         showResultModal(selectedLocation);
-        //     }
-        // });
+            const formData = new FormData(form);
 
-        // Show modal if image exists
-        window.addEventListener('load', () => {
-            const modal = document.getElementById('resultModal');
-            const selectedLocation = modal.getAttribute('data-location');
-            const generatedImage = document.querySelector('#modalImage');
-            
-            // Check if we have an image result to show
-            if (selectedLocation && generatedImage && generatedImage.src) {
-                showResultModal(selectedLocation);
+            try {
+                // 🟢 STEP 1: เรียก Route ตรวจสอบภาพ
+                const res1 = await fetch('/step1_classify', {
+                    method: 'POST',
+                    body: formData,
+                });
+                const result1 = await res1.json();
+
+                if (!result1.success) {
+                    throw new Error(result1.error || 'Classification failed.');
+                }
+
+                // ✨✨ แสดงข้อความแจ้งเตือน (Confidence Score) ✨✨
+                // ตรงนี้จะทำงานแล้วเพราะฟังก์ชัน showMessage มี class 'show' แล้ว
+                showMessage(`✅ Image Verified! Confidence: ${result1.score_percent}%. Starting generation...`, 'success');
+                
+                generateBtn.textContent = `Generating (${result1.score_percent}% Match)...`; 
+                
+                // หน่วงเวลา 1.5 วินาที ให้อ่านทัน
+                await new Promise(r => setTimeout(r, 1500));
+
+                // 🎨 STEP 2: เจนภาพ
+                const res2 = await fetch('/step2_generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        temp_filename: result1.temp_filename,
+                        place_name: result1.place_name
+                    }),
+                });
+                const result2 = await res2.json();
+
+                if (!result2.success) {
+                    throw new Error(result2.error || 'Generation failed.');
+                }
+
+                modalImage.src = result2.img_url;
+                showResultModal(result1.place_name); 
+                
+                showMessage('Transformation Complete! Enjoy your trip to the 1960s.', 'success');
+
+            } catch (error) {
+                console.error('Process failed:', error);
+                showMessage(error.message, 'error');
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Generate';
+                loading.style.display = 'none';
             }
         });
 
-        // Show modal function
-        function showResultModal(locationValue) {
-            const locationName = getLocationDisplayName(locationValue);
-            const description = locationDescriptions[locationValue] || 'Experience the historic charm of this iconic Bangkok location from the 1960s.';
-            
-            document.getElementById('modalLocationName').textContent = locationName;
-            document.getElementById('modalLocationDescription').textContent = description;
-            
-            resultModal.classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-
-        // Close modal
+        // --- Modal Close Events ---
         modalClose.addEventListener('click', () => {
             resultModal.classList.remove('show');
             document.body.style.overflow = 'auto';
         });
 
-        // Close modal when clicking outside
         resultModal.addEventListener('click', (e) => {
             if (e.target === resultModal) {
                 resultModal.classList.remove('show');
@@ -897,7 +900,6 @@
             }
         });
 
-        // Smooth scroll for navigation links
         document.querySelectorAll('.nav-link').forEach(link => {
             link.addEventListener('click', (e) => {
                 e.preventDefault();

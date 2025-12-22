@@ -1,185 +1,208 @@
-#app.py
-from flask import Flask, request, render_template, send_file
-import openai
-from io import BytesIO
+# app.py
 import os
-from PIL import Image
-import base64
-import requests
 import glob
-import random
-from runwayml import RunwayML
+from io import BytesIO
+from flask import Flask, request, render_template, jsonify, url_for
+from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
-from classifier import check_image_category
-from reference_prompt_builder import build_prompt  # <-- import ใหม่
+# --- 1. Import ระบบ Classifier ---
+from classifier import classify_image, PLACE_LABELS
+
+# --- 2. Import ระบบ ML Transformer (ของเพื่อน) ---
+try:
+    from ml_transformer import EraVisionTransformer
+    ML_ENABLED = True
+except ImportError:
+    print("⚠️ Warning: ไม่พบไฟล์ ml_transformer.py หรือ library ไม่ครบ")
+    ML_ENABLED = False
+    ml_transformer = None
 
 # โหลด environment variables
 load_dotenv()
 
-# ตั้งค่า Flask
+# --- ตั้งค่า Flask ---
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = "uploads"
+# ใช้ static folder ในการเก็บไฟล์เพื่อให้เข้าถึงผ่าน URL ได้ง่าย
+app.config['UPLOAD_FOLDER'] = "static/uploads"
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], "images_database"), exist_ok=True)
 
-# --- API Keys ---
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-RUNWAY_API_KEY = os.getenv("RUNWAY_API_KEY")
+# --- Config Model Path ---
+# แก้ไข Path ให้ตรงกับที่เก็บโมเดลจริง
+ML_MODEL_PATH = "models/democracy_monument_1960s" 
 
-openai.api_key = OPENAI_API_KEY
-runway_client = RunwayML(api_key=RUNWAY_API_KEY)
+# --- โหลด ML Model (Load Once) ---
+if ML_ENABLED:
+    try:
+        print("⏳ Loading ML Model... (Please wait)")
+        ml_transformer = EraVisionTransformer(ML_MODEL_PATH)
+        print("✅ ML Model Ready!")
+    except Exception as e:
+        print(f"❌ Error loading ML Model: {e}")
+        ML_ENABLED = False
 
-PROMPT_VIDEO = "Short 5-second video, gentle camera motion, vintage 1960s street style"
-
+# --- Helper Functions ---
 def get_next_filename(folder, prefix="BangkokEra", ext=".png"):
-    os.makedirs(folder, exist_ok=True)
     files = glob.glob(os.path.join(folder, f"{prefix}*{ext}"))
     if not files:
         return os.path.join(folder, f"{prefix}001{ext}")
-    numbers = [int(os.path.splitext(f)[0].split(prefix)[-1]) for f in files]
-    next_num = max(numbers) + 1
+    numbers = []
+    for f in files:
+        try:
+            num_part = os.path.splitext(f)[0].split(prefix)[-1]
+            numbers.append(int(num_part))
+        except ValueError:
+            continue
+    next_num = max(numbers) + 1 if numbers else 1
     return os.path.join(folder, f"{prefix}{next_num:03d}{ext}")
 
-def convert_image_to_1960s(image_path, place_name, reference_folder=None):
-    """สร้างภาพ OpenAI แบบอิง reference"""
-    allowed_exts = (".png", ".jpg", ".jpeg", ".webp")
-    if not image_path.lower().endswith(allowed_exts):
-        raise ValueError("Only PNG, JPG, JPEG, or WebP images are supported.")
+def process_image_with_ml(image_path, place_name):
+    if not ML_ENABLED or ml_transformer is None:
+        raise ValueError("ML Model is not loaded.")
 
-    img = Image.open(image_path).convert("RGB")
+    print(f"🎨 Generating 1960s style for: {place_name}")
+    # เรียกใช้ transform_to_1960s จาก class ของเพื่อน
+    result_pil = ml_transformer.transform_to_1960s(image_path, place_name)
+    
+    if result_pil is None:
+        raise ValueError("ML Model returned None.")
+
+    # แปลงเป็น bytes เพื่อบันทึก
     buffered = BytesIO()
-    img.save(buffered, format="PNG")
-    buffered.seek(0)
+    result_pil.save(buffered, format="PNG")
+    return buffered.getvalue()
 
-    # ใช้ build_prompt จาก reference_prompt_builder
-    full_prompt = build_prompt(place_name, user_image_path=image_path)
+# --- ROUTES ---
 
-    response = openai.images.edit(
-        model="gpt-image-1",
-        image=("input.png", buffered, "image/png"),
-        prompt=full_prompt,
-        size="1024x1024"
-    )
-
-    if response.data and response.data[0].b64_json:
-        return base64.b64decode(response.data[0].b64_json)
-    else:
-        raise ValueError("OpenAI did not return valid image data.")
-
-def generate_video_from_image(img_bytes, output_path="output.mp4"):
-    img_b64 = base64.b64encode(img_bytes).decode("utf-8")
-    task = runway_client.image_to_video.create(
-        model="gen4_turbo",
-        prompt_image=f"data:image/png;base64,{img_b64}",
-        prompt_text=PROMPT_VIDEO,
-        ratio="1280:720",
-        duration=5
-    ).wait_for_task_output()
-
-    if not task.output:
-        raise ValueError("Runway did not return a valid video URL.")
-
-    video_url = task.output[0] if isinstance(task.output[0], str) else task.output[0].get("url")
-    if not video_url:
-        raise ValueError("Runway did not return a valid video URL.")
-
-    r = requests.get(video_url)
-    if r.status_code != 200:
-        raise ValueError("Failed to download video from Runway.")
-
-    with open(output_path, "wb") as f:
-        f.write(r.content)
-
-    return output_path
-
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET"])
 def index():
-    message = ""
-    img_file = None
-    video_file = None
+    return render_template("index.html", places=PLACE_LABELS)
 
-    if request.method == "POST":
+# ==========================================
+# 🟢 STEP 1: รับไฟล์ + ตรวจสอบ (ยังไม่เจนภาพ)
+# ==========================================
+@app.route("/step1_classify", methods=["POST"])
+def step1_classify():
+    try:
+        # 1. เช็ค Input
         place_selected = request.form.get("location")
+        if not place_selected or "image" not in request.files:
+            return jsonify({"error": "Missing location or image"}), 400
+            
+        file = request.files["image"]
+        if file.filename == "":
+            return jsonify({"error": "No file selected"}), 400
 
-        if "image" not in request.files:
-            message = "No file uploaded."
-        else:
-            file = request.files["image"]
-            if file.filename == "":
-                message = "No file selected."
-            else:
-                try:
-                    temp_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_upload.png")
-                    file.save(temp_path)
-                    
-                    # บังคับให้รันส่วนสร้างภาพเลย โดยไม่ต้องเช็ค
-                    ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
-                    img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
+        # 2. บันทึกไฟล์ชั่วคราว
+        filename = secure_filename(file.filename)
+        temp_filename = f"temp_{filename}"
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
+        file.save(temp_path)
 
-                    # --- บันทึกภาพ --- (ส่วนวิดีโอจะถูกคอมเมนต์ออก)
-                    images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
-                    # videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database") #<-- คอมเมนต์ออก
-                    os.makedirs(images_folder, exist_ok=True)
-                    # os.makedirs(videos_folder, exist_ok=True) #<-- คอมเมนต์ออก
+        print(f"\n--- 🔍 Step 1: Classification ({place_selected}) ---")
+        
+        # 3. เรียก Classifier
+        predicted_place, score, is_valid = classify_image(temp_path)
+        print(f"AI Result: {predicted_place} ({score*100:.2f}%)")
 
-                    output_img_path = get_next_filename(images_folder, ext=".png")
-                    with open(output_img_path, "wb") as f:
-                        f.write(img_bytes)
-                    img_file = output_img_path
+        # 4. เช็คเงื่อนไข (Logic Gate)
+        
+        # กรณี Rejected (เช่น ติดคน, มุมกล้องแย่)
+        if "Rejected" in predicted_place:
+            error_msg = f"Image Rejected: {predicted_place.replace('Rejected', '').strip('() ')}"
+            return jsonify({"success": False, "error": error_msg}), 400
 
-                except Exception as e:
-                    message = f"Error: {str(e)}"
+        # 👇👇 แก้ไขตรงนี้ครับ: กรณี Unknown (AI ไม่รู้ที่ไหน) 👇👇
+        if "Other" in predicted_place or "Unknown" in predicted_place:
+             # ดึงสิ่งที่ AI เห็นออกมา (เช่น Other (Cat) -> Cat)
+             ai_guess = predicted_place.replace("Other", "").strip("() ")
+             if not ai_guess or ai_guess == "Unknown":
+                 ai_guess = "Nothing recognizable"
+                 
+             return jsonify({
+                 "success": False, 
+                 "error": f"❌ Could not identify the location. AI sees: '{ai_guess}'"
+             }), 400
+        # 👆👆 จบส่วนแก้ไข 👆👆
 
-                # === ไว้มาเปิดตอนหลัง(เชื่อมกับ classifier.py) ===
-                # try:
-                #     temp_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_upload.png")
-                #     file.save(temp_path)
+        # กรณีสถานที่ผิด (Mismatch)
+        if predicted_place != place_selected:
+            return jsonify({
+                "success": False,
+                "error": f"Mismatch! Selected '{place_selected}' but AI sees '{predicted_place}' ({score*100:.1f}%)."
+            }), 400
 
-                #     # --- ตรวจสถานที่ ---
-                #     confidence = check_image_category(temp_path, place_selected)
-                #     threshold = 0.8
+        # ✅ ผ่าน Step 1: ส่งผลกลับไปบอกหน้าเว็บก่อน!
+        # ส่งชื่อไฟล์ชั่วคราวกลับไปด้วย เพื่อเอาไปใช้ใน Step 2
+        return jsonify({
+            "success": True,
+            "message": f"Verified: {predicted_place}",
+            "score_percent": f"{score*100:.1f}", # ส่งเป็นตัวเลขเปอร์เซ็นต์
+            "temp_filename": temp_filename,       # สำคัญ! ต้องใช้ชื่อนี้ไปเจนต่อ
+            "place_name": predicted_place
+        })
 
-                #     if confidence < threshold:
-                #         message = f"ภาพนี้อาจไม่ใช่ {place_selected} (ความมั่นใจ {confidence:.2f})"
-                #         img_file = temp_path
-                #     else:
-                #         ref_folder = os.path.join("dataset", place_selected.replace(" ", "_"))
-                #         img_bytes = convert_image_to_1960s(temp_path, place_name=place_selected, reference_folder=ref_folder)
+    except Exception as e:
+        print(f"Error Step 1: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
-                #         # --- บันทึกภาพ --- (ส่วนวิดีโอจะถูกคอมเมนต์ออก)
-                #         images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
-                #         # videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database") #<-- คอมเมนต์ออก
-                #         os.makedirs(images_folder, exist_ok=True)
-                #         # os.makedirs(videos_folder, exist_ok=True) #<-- คอมเมนต์ออก
 
-                #         output_img_path = get_next_filename(images_folder, ext=".png")
-                #         with open(output_img_path, "wb") as f:
-                #             f.write(img_bytes)
-                #         img_file = output_img_path
+# ==========================================
+# 🎨 STEP 2: รับคำสั่งเจนภาพ (ต่อจากตะกี้)
+# ==========================================
+@app.route("/step2_generate", methods=["POST"])
+def step2_generate():
+    temp_path = None # ประกาศตัวแปรไว้ก่อนเพื่อใช้ใน finally
+    try:
+        # รับข้อมูลจาก JSON
+        data = request.json
+        temp_filename = data.get("temp_filename")
+        place_name = data.get("place_name")
 
-                #         # --- ปิดการสร้างวิดีโอชั่วคราว ---
-                #         # output_video_path = get_next_filename(videos_folder, ext=".mp4") #<-- คอมเมนต์ออก
-                #         # video_file = generate_video_from_image(img_bytes, output_video_path) #<-- คอมเมนต์ออก
+        if not temp_filename or not place_name:
+            return jsonify({"error": "Missing data for generation"}), 400
 
-                # except Exception as e:
-                #     message = f"Error: {str(e)}"
+        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_filename)
+        
+        # เช็คว่าไฟล์ยังอยู่ไหม
+        if not os.path.exists(temp_path):
+             return jsonify({"error": "Temporary file lost. Please upload again."}), 400
 
-    # ตัวแปร video_file จะเป็น None และถูกส่งไปที่ template
-    return render_template("index.html", message=message, img_file=img_file, video_file=video_file)
+        print(f"\n--- 🎨 Step 2: Generation Start ({place_name}) ---")
 
-@app.route("/image")
-def image():
-    images_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
-    latest_image = get_next_filename(images_folder, ext=".png")
-    latest_image = os.path.join(images_folder, f"BangkokEra{int(latest_image[-7:-4])-1:03d}.png")
-    return send_file(latest_image, mimetype="image/png")
+        # เรียก ML Model
+        img_bytes = process_image_with_ml(temp_path, place_name=place_name)
 
-@app.route("/video")
-def video():
-    videos_folder = os.path.join(app.config['UPLOAD_FOLDER'], "videos_database")
-    latest_video = get_next_filename(videos_folder, ext=".mp4")
-    latest_video = os.path.join(videos_folder, f"BangkokEra{int(latest_video[-7:-4])-1:03d}.mp4")
-    return send_file(latest_video, mimetype="video/mp4")
+        # บันทึกรูปผลลัพธ์ (อันนี้เก็บไว้โชว์ ไม่ลบ)
+        images_db_folder = os.path.join(app.config['UPLOAD_FOLDER'], "images_database")
+        output_img_path = get_next_filename(images_db_folder, ext=".png")
+        
+        with open(output_img_path, "wb") as f:
+            f.write(img_bytes)
+        
+        # ส่ง URL กลับ
+        web_path = output_img_path.replace("\\", "/")
+        
+        return jsonify({
+            "success": True,
+            "img_url": web_path,
+            "message": "Generation Complete!"
+        })
+
+    except Exception as ml_error:
+        print(f"ML Error: {ml_error}")
+        return jsonify({"success": False, "error": f"Generation failed: {str(ml_error)}"}), 500
+
+    finally:
+        # 👇👇 เพิ่มส่วนนี้: ลบไฟล์ temp ทิ้งทุกกรณี (ไม่ว่าจะสำเร็จหรือ Error) 👇👇
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+                print(f"🗑️ Cleaned up temp file: {temp_path}")
+            except Exception as e:
+                print(f"⚠️ Could not delete temp file: {e}")
+        # 👆👆 จบส่วนลบไฟล์ 👆👆
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

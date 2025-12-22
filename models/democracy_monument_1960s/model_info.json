@@ -1,0 +1,9 @@
+{
+  "model_name": "Democracy_Monument_1960s",
+  "base_model": "runwayml/stable-diffusion-v1-5",
+  "controlnet": "lllyasviel/control_v11p_sd15_canny",
+  "training_epochs": 100,
+  "lora_rank": 8,
+  "dataset_size": 210,
+  "prompt_template": "Democracy Monument Bangkok, 1960s vintage photograph, historical architecture"
+}
